@@ -1,23 +1,19 @@
-# Imports
-from flask import Flask, g, render_template,request,session,redirect,flash, url_for, abort, jsonify
-import psycopg2
-import os
-import re
-import numpy as np
-import pandas as pd
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
-from instagrapi.types import Usertag, Location
-from instagrapi import Client
-import textwrap
-import json
-import os
-import base64
 import random
 import string
-from datetime import datetime
-from config import username, password, sheet_url
+import textwrap
+
+from PIL import Image, ImageDraw, ImageFont
+from instagrapi import Client
+from instagrapi.types import Usertag
+import pandas as pd
+import psycopg2
+
+from config import password, sheet_url, username
+from flask import (
+	Flask,
+	jsonify,
+	request,
+)
 
 # encode to pass the string in database
 def encodeString(str):
@@ -37,7 +33,7 @@ connection = psycopg2.connect(
 	host = "localhost",
 	database = "autopost",
 	user = "postgres",
-	password = "1141",
+	password = "postgres",
 	port = 5432
 )
 
@@ -181,7 +177,7 @@ def insertQueue():
 	url_1 = sheet_url.replace('/edit', '/export?format=csv&')
 	p = pd.read_csv(url_1, usecols= ['Submit your ticket'])
 	Entries = [i[0] for i in p.values]
-	cursor.execute(f"SELECT MAX(id) from accepted;")
+	cursor.execute("SELECT MAX(id) from accepted;")
 	idList = cursor.fetchall()
 	id1 = 0
 	if(len(idList) == 1):
@@ -190,7 +186,7 @@ def insertQueue():
 		else:
 			id1 = int(idList[0][0])
 
-	cursor.execute(f"SELECT MAX(id) from declined;")
+	cursor.execute("SELECT MAX(id) from declined;")
 	idList = cursor.fetchall()
 	id2 = 0
 	if(len(idList) == 1):
@@ -199,7 +195,7 @@ def insertQueue():
 		else:
 			id2 = int(idList[0][0])
 
-	cursor.execute(f"SELECT MAX(id) from skipped;")
+	cursor.execute("SELECT MAX(id) from skipped;")
 	idList = cursor.fetchall()
 	id3 = 0
 	if(len(idList) == 1):
@@ -218,11 +214,11 @@ def insertQueue():
 	for s in queue:
 		st = encodeString(s)
 		print(st)
-		cursor.execute(f"INSERT INTO entries (entry) VALUES ('{st}');")
+		cursor.execute("INSERT INTO entries (entry) VALUES ($1);", (st,))
 	# cursor.commit()
 
 def createSessionId():
-	cursor.execute(f"SELECT session_id from sessions")
+	cursor.execute("SELECT session_id from sessions")
 	sessionsList = cursor.fetchall()
 	sessionsList = [a[0] for a in sessionsList]
 	while (True):
@@ -237,7 +233,7 @@ def login():
 	if(request.method == request.method):
 		username = request.args.get('username')
 		print(username)
-		cursor.execute(f"SELECT password from accounts WHERE accounts.username = '{username}';")
+		cursor.execute("SELECT password from accounts WHERE accounts.username = $1;", (username,))
 		passList = cursor.fetchall()
 		print(passList)
 		if len(passList) != 1:
@@ -245,7 +241,7 @@ def login():
 		else:
 			if(passList[0][0] == request.args.get('password')):
 				sessionId = createSessionId()
-				cursor.execute(f"INSERT INTO sessions (session_id, username, login_time) VALUES ('{sessionId}', '{username}', current_timestamp);")
+				cursor.execute("INSERT INTO sessions (session_id, username, login_time) VALUES ($1, $2, current_timestamp);", (sessionId, username))
 				return sessionId
 		return "0"
 	return "0"
@@ -256,7 +252,7 @@ def getEntry():
 	if(request.method=='GET'):
 		print("Get request in getEntry received")
 		entries = []
-		cursor.execute(f"SELECT MAX(id) from accepted;")
+		cursor.execute("SELECT MAX(id) from accepted;")
 		idList = cursor.fetchall()
 		id1 = 0
 		if(len(idList) == 1):
@@ -265,7 +261,7 @@ def getEntry():
 			else:
 				id1 = int(idList[0][0])
 
-		cursor.execute(f"SELECT MAX(id) from declined;")
+		cursor.execute("SELECT MAX(id) from declined;")
 		idList = cursor.fetchall()
 		id2 = 0
 		if(len(idList) == 1):
@@ -274,7 +270,7 @@ def getEntry():
 			else:
 				id2 = int(idList[0][0])
 
-		cursor.execute(f"SELECT MAX(id) from skipped;")
+		cursor.execute("SELECT MAX(id) from skipped;")
 		idList = cursor.fetchall()
 		id3 = 0
 		if(len(idList) == 1):
@@ -350,16 +346,16 @@ def getEntrySkipped():
 		print(id)
 		print(type(id))
 
-		cursor.execute(f"DELETE FROM skipped WHERE id = {id};")
+		cursor.execute("DELETE FROM skipped WHERE id = $1;", (id,))
 		if(request.args.get('status') == 'approve'):
-			cursor.execute(f"INSERT INTO accepted (id) VALUES ({id});")
+			cursor.execute("INSERT INTO accepted (id) VALUES ($1);", (id,))
 			print(createPost(id))
 			return "Posted on Instagram"
 		elif(request.args.get('status') == 'decline'):
-			cursor.execute(f"INSERT INTO declined (id) VALUES ({id});")
+			cursor.execute("INSERT INTO declined (id) VALUES ($1);", (id,))
 			return "Declined"
 		elif(request.args.get('status') == 'skip'):
-			cursor.execute(f"INSERT INTO skipped (id) VALUES ({id});")
+			cursor.execute("INSERT INTO skipped (id) VALUES ($1);",(id,))
 			return "Skipped"
 		else:
 			return "Something went wrong in getEntrySkipped POST"
@@ -372,13 +368,13 @@ def index():
 # API to verify the session id everytime the user opens the app
 @app.route('/verify', methods=['GET', 'POST'])
 def verifySessionId():
-	cursor.execute(f"SELECT session_id from sessions;")
+	cursor.execute("SELECT session_id from sessions;")
 	sessionsList = cursor.fetchall()
 	sessionId = request.args.get('session_id')
 	print(sessionsList)
 	sessionsList = [a[0] for a in sessionsList]
 	if(sessionId in sessionsList):
-		cursor.execute(f"UPDATE sessions SET login_time = current_timestamp WHERE session_id = '{sessionId}';")
+		cursor.execute("UPDATE sessions SET login_time = current_timestamp WHERE session_id = $1;", (sessionId,))
 		return "1"
 	else:
 		return "0"
@@ -389,7 +385,7 @@ def logout():
 	sid = request.args.get('session_id')
 	print("logging out ")
 	print(sid)
-	cursor.execute(f"DELETE FROM sessions where session_id = '{sid}';")
+	cursor.execute("DELETE FROM sessions where session_id = $1;", (sid,))
 	# connection.commit()
 	return "1"
 
