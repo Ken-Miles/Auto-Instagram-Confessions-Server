@@ -77,7 +77,7 @@ def verifySid(sessionId):
 #create post and post it on instagram
 def createPost(id):
 	print(id)
-	cursor.execute(f"SELECT entry FROM entries WHERE id = {id};")
+	cursor.execute("SELECT entry FROM entries WHERE id = $1;", (id,))
 	l = cursor.fetchall()
 	print(type(l))
 	print(len(l))
@@ -280,12 +280,12 @@ def getEntry():
 				id3 = int(idList[0][0])
 		print("DONE ")
 		maxId = max(id1, max(id2, id3))
-		cursor.execute(f"SELECT id, entry from entries WHERE id > {maxId} ORDER BY id limit 1;")
+		cursor.execute("SELECT id, entry from entries WHERE id > $1 ORDER BY id limit 1;", (maxId,))
 		entries = cursor.fetchall()
 		print(entries)
 		if(len(entries) != 1):
 			insertQueue()
-			cursor.execute(f"SELECT id, entry from entries WHERE id > {maxId} ORDER BY id limit 1;")
+			cursor.execute("SELECT id, entry from entries WHERE id > $1 ORDER BY id limit 1;", (maxId,))
 			entries = cursor.fetchall()
 
 		if(len(entries) != 1):
@@ -305,14 +305,14 @@ def getEntry():
 
 		if(request.args.get('status') == 'approve'):
 			print("approval")
-			cursor.execute(f"INSERT INTO accepted (id) VALUES ({id});")
+			cursor.execute("INSERT INTO accepted (id) VALUES ($1);",(id,))
 			createPost(id)
 			return "Posted on Instagram"
 		elif(request.args.get('status') == 'decline'):
-			cursor.execute(f"INSERT INTO declined (id) VALUES ({id});")
+			cursor.execute("INSERT INTO declined (id) VALUES ($1);",(id,))
 			return "Declined"
 		elif(request.args.get('status') == 'skip'):
-			cursor.execute(f"INSERT INTO skipped (id) VALUES ({id});")
+			cursor.execute("INSERT INTO skipped (id) VALUES ($1);",(id,))
 			return "Skipped"
 		else:
 			return "Something went wrong in getEntry POST"
@@ -325,7 +325,7 @@ def getEntrySkipped():
 	if(request.method=='GET'):
 		print("Get request in getEntrySkipped received")
 		entries = []
-		cursor.execute(f"SELECT id from skipped limit 1;")
+		cursor.execute("SELECT id from skipped limit 1;")
 		entries = cursor.fetchall()
 
 		if(len(entries) != 1):
@@ -334,7 +334,7 @@ def getEntrySkipped():
 				"text" : "No new Entries! Please come back later",
 				})
 		id = entries[0][0]
-		cursor.execute(f"SELECT id, entry from entries WHERE id = {id};")
+		cursor.execute("SELECT id, entry from entries WHERE id = $1;", (id,))
 		entries = cursor.fetchall()
 		return jsonify({
 				 "id" : str(entries[0][0]),
