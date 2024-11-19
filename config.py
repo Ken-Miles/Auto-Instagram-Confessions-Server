@@ -1,6 +1,8 @@
 # instagram account details (username and password)
-username = 'instagram_username'
-password = 'instagram_handle_password'
+import yaml
 
-# paste your google sheets url where the responses are being saved
-sheet_url = "https://docs.google.com/spreadsheets/XXXXXXX"
+with open('credentials.yml') as f:
+    credentials = dict(yaml.safe_load(f))
+    username = credentials['username']
+    password = credentials['password']
+    sheet_url = credentials['sheet_url']
