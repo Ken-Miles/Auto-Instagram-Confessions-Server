@@ -1,34 +1,28 @@
-DROP TABLE accounts;
-CREATE TABLE accounts (
+CREATE TABLE IF NOT EXISTS accounts (
         username VARCHAR (255) UNIQUE NOT NULL,
         password VARCHAR (255)
 );
 
 INSERT INTO accounts (username, password) VALUES ('manoj', 'manoj');
 
-DROP TABLE entries;
-CREATE TABLE entries (
+CREATE TABLE  IF NOT EXISTS entries (
         id  SERIAL PRIMARY KEY,
         entry TEXT NOT NULL
 );
 
-DROP TABLE accepted;
-CREATE TABLE accepted (
+CREATE TABLE  IF NOT EXISTS accepted (
         id INT UNIQUE NOT NULL
 );
 
-DROP TABLE declined;
-CREATE TABLE declined (
+CREATE TABLE  IF NOT EXISTS declined (
         id INT UNIQUE NOT NULL
 );
 
-DROP TABLE skipped;
-CREATE TABLE skipped (
+CREATE TABLE  IF NOT EXISTS skipped (
         id INT UNIQUE NOT NULL
 );
 
-DROP TABLE sessions;
-CREATE TABLE sessions (
+CREATE TABLE  IF NOT EXISTS sessions (
         session_id text PRIMARY KEY,
         username VARCHAR (255) NOT NULL,
         login_time TIMESTAMP
